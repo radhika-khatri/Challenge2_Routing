@@ -1,0 +1,11 @@
+driver_id,name,max_daily_deliveries,vehicle_type,home_base_location_id
+DRV001,Driver_1,6,Diesel,LOC035
+DRV002,Driver_2,5,Diesel,LOC023
+DRV003,Driver_3,6,Hybrid,LOC022
+DRV004,Driver_4,13,EV,LOC007
+DRV005,Driver_5,8,EV,LOC031
+DRV006,Driver_6,9,Diesel,LOC029
+DRV007,Driver_7,12,EV,LOC009
+DRV008,Driver_8,5,Hybrid,LOC014
+DRV009,Driver_9,10,Diesel,LOC025
+DRV010,Driver_10,5,Hybrid,LOC032
