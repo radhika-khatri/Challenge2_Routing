@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Route Optimizer - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>DeliveryOptimizer</h1>
+        </div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="{{ url_for('index') }}" {% if request.path == url_for('index') %}class="active"{% endif %}>
+                    <i class="fas fa-home"></i> <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('routes') }}" {% if request.path == url_for('routes') %}class="active"{% endif %}>
+                    <i class="fas fa-route"></i> <span>Today's Routes</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('report_failed') }}" {% if request.path == url_for('report_failed') %}class="active"{% endif %}>
+                    <i class="fas fa-exclamation-triangle"></i> <span>Report Failed</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('failed_orders') }}" {% if request.path == url_for('failed_orders') %}class="active"{% endif %}>
+                    <i class="fas fa-calendar-alt"></i> <span>Rescheduled Orders</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'message' else 'info' }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

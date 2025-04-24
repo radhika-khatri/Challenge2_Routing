@@ -1,0 +1,79 @@
+{% extends "layout.html" %}
+
+{% block title %}Report Failed Deliveries{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Report Failed Deliveries</h1>
+    <p>Select which deliveries couldn't be completed because the customer wasn't available</p>
+</div>
+
+<div class="card">
+    <form action="{{ url_for('report_failed') }}" method="post">
+        <h2>Select Failed Deliveries</h2>
+        <p style="margin-bottom: 20px;">Check the boxes for any deliveries where the customer wasn't available to receive their order. These will be automatically rescheduled for tomorrow.</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60px;">Select</th>
+                    <th>Location ID</th>
+                    <th>Order ID</th>
+                    <th>Driver</th>
+                    <th>Arrival Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stop in stops %}
+                <tr>
+                    <td style="text-align: center;">
+                        <label class="checkbox-container" style="margin: 0;">
+                            <input type="checkbox" name="failed_locations" value="{{ stop.location_id }}">
+                            <span class="checkmark"></span>
+                        </label>
+                    </td>
+                    <td>{{ stop.location_id }}</td>
+                    <td>{{ stop.order_id }}</td>
+                    <td>{{ stop.driver_name }}</td>
+                    <td>{{ stop.arrival_time_fmt }}</td>
+                    <td>
+                        {% if stop.is_late %}
+                            <span class="badge badge-danger">Late</span>
+                        {% else %}
+                            <span class="badge badge-success">On time</span>
+                        {% endif %}
+                        
+                        {% if stop.is_rescheduled %}
+                            <span class="badge badge-primary">Rescheduled</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+            <a href="{{ url_for('routes') }}" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Back to Routes
+            </a>
+            <button type="submit" class="btn btn-warning">
+                <i class="fas fa-calendar-plus"></i> Reschedule Selected Deliveries
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Instructions</h2>
+    <ol style="margin-left: 20px; line-height: 1.6;">
+        <li>Check the boxes for any deliveries where the customer wasn't available to collect their order.</li>
+        <li>Click "Reschedule Selected Deliveries" to mark these for delivery tomorrow.</li>
+        <li>The system will automatically optimize tomorrow's routes to include these rescheduled deliveries.</li>
+        <li>Rescheduled deliveries will be given priority in tomorrow's schedule.</li>
+    </ol>
+    <div class="alert alert-warning" style="margin-top: 20px;">
+        <strong>Note:</strong> Only report deliveries where the customer wasn't available. Do not report deliveries that failed for other reasons (wrong address, damaged package, etc.) as these require special handling.
+    </div>
+</div>
+{% endblock %}

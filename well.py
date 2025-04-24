@@ -3,12 +3,14 @@ from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 import numpy as np
 
 # Load data
-drivers = pd.read_csv('drivers.csv')
-orders = pd.read_csv('delivery_orders.csv').head(10)  # Use first 10 orders
-distance_traffic = pd.read_csv('distance_traffic_matrix.csv')
+drivers = pd.read_csv("data/drivers.csv")
+orders = pd.read_csv("data/delivery_orders_with_days.csv").head(9)  # Use first 9 orders
+distance_traffic = pd.read_csv("data/distance_traffic_matrix.csv")
+print("Data loaded: drivers, orders, and distance_traffic")
 
 # Create location list with depot
 locations = ['DEPOT'] + orders['delivery_location_id'].unique().tolist()
+print(f"Locations created: {locations}")
 
 # Create distance matrix with traffic adjustment
 distance_matrix = []
@@ -20,16 +22,22 @@ for from_loc in locations:
         else:
             traffic_data = distance_traffic[(distance_traffic['from_location_id'] == from_loc) &
                                             (distance_traffic['to_location_id'] == to_loc)]
-            row.append(int(traffic_data['distance_km'].values[0] *
-                           traffic_data['traffic_multiplier'].values[0]))
+            if not traffic_data.empty:
+                adjusted_distance = int(traffic_data['distance_km'].values[0] *
+                                        traffic_data['traffic_multiplier'].values[0])
+                row.append(adjusted_distance)
+            else:
+                print(f"⚠️ Warning: Missing distance from {from_loc} to {to_loc}. Setting to large penalty.")
+                row.append(9999)  # high cost to avoid routing here
     distance_matrix.append(row)
+print("Distance matrix created with traffic adjustments")
 
 # Calculate time matrix (assuming average speed of 30 km/h)
 time_matrix = []
 for row in distance_matrix:
     time_row = [(d / 30) * 60 for d in row]
     time_matrix.append(time_row)
-
+print("Time matrix calculated from distance matrix")
 
 # VRP setup
 def create_data_model():
@@ -63,18 +71,19 @@ def create_data_model():
     for _ in range(len(orders)):
         data['priorities'].append(np.random.randint(1, 4))  # Priority levels 1-3
 
+    print("Data model created with demands, capacities, time windows, service times, and priorities")
     return data
-
 
 data = create_data_model()
 
 # Create routing index manager
 manager = pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
                                        data['num_vehicles'], data['depot'])
+print("Routing index manager created")
 
 # Create routing model
 routing = pywrapcp.RoutingModel(manager)
-
+print("Routing model created")
 
 # Register distance callback
 def distance_callback(from_index, to_index):
@@ -82,16 +91,14 @@ def distance_callback(from_index, to_index):
     to_node = manager.IndexToNode(to_index)
     return data['distance_matrix'][from_node][to_node]
 
-
 dist_callback_index = routing.RegisterTransitCallback(distance_callback)
 routing.SetArcCostEvaluatorOfAllVehicles(dist_callback_index)
-
+print("Distance callback registered")
 
 # Add capacity constraint
 def demand_callback(from_index):
     from_node = manager.IndexToNode(from_index)
     return data['demands'][from_node]
-
 
 demand_callback_index = routing.RegisterUnaryTransitCallback(demand_callback)
 routing.AddDimensionWithVehicleCapacity(
@@ -101,7 +108,7 @@ routing.AddDimensionWithVehicleCapacity(
     True,  # start cumul to zero
     'Capacity'
 )
-
+print("Capacity constraint added")
 
 # Add time window constraints
 def time_callback(from_index, to_index):
@@ -109,7 +116,6 @@ def time_callback(from_index, to_index):
     to_node = manager.IndexToNode(to_index)
     # Travel time + service time at from_node
     return int(data['time_matrix'][from_node][to_node] + data['service_times'][from_node])
-
 
 time_callback_index = routing.RegisterTransitCallback(time_callback)
 
@@ -122,11 +128,13 @@ routing.AddDimension(
 )
 
 time_dimension = routing.GetDimensionOrDie('Time')
+print("Time window constraints added")
 
 # Add time window constraints for each location
 for location_idx, time_window in enumerate(data['time_windows']):
     index = manager.NodeToIndex(location_idx)
     time_dimension.CumulVar(index).SetRange(time_window[0], time_window[1])
+print("Time windows for each location set")
 
 # Add priority by penalizing late delivery through global span cost
 for node_idx in range(1, len(data['priorities'])):  # Skip depot
@@ -134,9 +142,11 @@ for node_idx in range(1, len(data['priorities'])):  # Skip depot
         index = manager.NodeToIndex(node_idx)
         # Adding a penalty for visiting high priority nodes late
         routing.AddDisjunction([index], 1000, 1)  # High penalty for not visiting
+print("Priority orders handled")
 
 # Set global span cost coefficient to balance route lengths
 time_dimension.SetGlobalSpanCostCoefficient(100)
+print("Global span cost coefficient set")
 
 # Setup search parameters
 search_parameters = pywrapcp.DefaultRoutingSearchParameters()
@@ -147,9 +157,11 @@ search_parameters.local_search_metaheuristic = (
     routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
 )
 search_parameters.time_limit.seconds = 30  # 30 seconds time limit
+print("Search parameters set")
 
 # Solve
 solution = routing.SolveWithParameters(search_parameters)
+print("Solution computed")
 
 # Print solution
 if solution:

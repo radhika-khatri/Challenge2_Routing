@@ -1,0 +1,79 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Delivery Optimization Dashboard</h1>
+    <p>Monitor delivery performance and manage failed deliveries</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card primary">
+        <div class="icon">
+            <i class="fas fa-truck"></i>
+        </div>
+        <div class="value">{{ stats.total_drivers }}</div>
+        <div class="label">Available Drivers</div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="icon">
+            <i class="fas fa-box"></i>
+        </div>
+        <div class="value">{{ stats.today_orders }}</div>
+        <div class="label">Today's Orders ({{ stats.today_date }})</div>
+    </div>
+    
+    <div class="stat-card warning">
+        <div class="icon">
+            <i class="fas fa-calendar-day"></i>
+        </div>
+        <div class="value">{{ stats.tomorrow_orders }}</div>
+        <div class="label">Tomorrow's Orders ({{ stats.tomorrow_date }})</div>
+    </div>
+    
+    <div class="stat-card danger">
+        <div class="icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="value">{{ stats.failed_orders }}</div>
+        <div class="label">Failed Deliveries to Reschedule</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Quick Actions</h2>
+    <p>Manage your delivery operations with these quick actions</p>
+    <div style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+        <a href="{{ url_for('routes') }}" class="btn btn-primary">
+            <i class="fas fa-route"></i> View Today's Routes
+        </a>
+        <a href="{{ url_for('report_failed') }}" class="btn btn-warning">
+            <i class="fas fa-exclamation-triangle"></i> Report Failed Deliveries
+        </a>
+        <a href="{{ url_for('failed_orders') }}" class="btn btn-success">
+            <i class="fas fa-calendar-alt"></i> View Rescheduled Orders
+        </a>
+        <form action="{{ url_for('reset_failed') }}" method="post" style="display: inline;">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to reset all failed deliveries?')">
+                <i class="fas fa-trash-alt"></i> Reset Failed Deliveries
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <h2>About the System</h2>
+    <p>This delivery optimization system helps manage your delivery routes and handle failed deliveries efficiently.</p>
+    <div style="margin-top: 15px;">
+        <h3>How it works:</h3>
+        <ol style="margin-left: 20px; line-height: 1.6;">
+            <li><strong>Route Optimization:</strong> The system uses advanced algorithms to create optimized delivery routes for your drivers.</li>
+            <li><strong>Failed Delivery Reporting:</strong> Delivery personnel can report which orders weren't delivered because customers weren't available.</li>
+            <li><strong>Automatic Rescheduling:</strong> Failed deliveries are automatically rescheduled for the next day with high priority.</li>
+            <li><strong>Dynamic Routing:</strong> The next day's routes are automatically adjusted to include the rescheduled deliveries.</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

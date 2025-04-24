@@ -1,0 +1,186 @@
+{% extends "layout.html" %}
+
+{% block title %}Rescheduled Orders{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Rescheduled Orders</h1>
+    <p>View failed deliveries that have been rescheduled for tomorrow ({{ tomorrow_date }})</p>
+</div>
+
+<div class="card">
+    <h2>Failed Deliveries</h2>
+    {% if failed_orders %}
+        <p>The following {{ failed_orders|length }} deliveries have been rescheduled for tomorrow:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Location ID</th>
+                    <th>Reported At</th>
+                    <th>Rescheduled For</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in failed_orders %}
+                <tr>
+                    <td>{{ order.location_id }}</td>
+                    <td>{{ order.reported_at }}</td>
+                    <td>{{ order.rescheduled_for }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+            <form action="{{ url_for('reset_failed') }}" method="post" style="display: inline;">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to reset all failed deliveries?')">
+                    <i class="fas fa-trash-alt"></i> Reset Failed Deliveries
+                </button>
+            </form>
+        </div>
+    {% else %}
+        <div class="alert alert-success">
+            <p>No failed deliveries have been reported. All deliveries are on schedule!</p>
+        </div>
+    {% endif %}
+</div>
+
+<div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;">
+    <h2>Tomorrow's Optimized Routes</h2>
+    <div class="badge badge-primary" style="align-self: center; font-size: 1rem; padding: 8px 15px;">
+        {{ rescheduled_count }} Rescheduled Orders Included
+    </div>
+</div>
+
+{% for driver in drivers %}
+<div class="route-card">
+    <div class="route-header">
+        <h3>Driver {{ driver.id }} ({{ driver.type }})</h3>
+        <div>
+            <span class="badge badge-primary">Score: {{ "%.1f"|format(driver.final_score) }}/100</span>
+        </div>
+    </div>
+    
+    <div class="route-stats">
+        <div class="stat">
+            <div class="stat-label">Total Distance</div>
+            <div class="stat-value">{{ driver.distance }} km</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">CO2 Emissions</div>
+            <div class="stat-value">{{ "%.1f"|format(driver.emissions) }} kg</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Stops</div>
+            <div class="stat-value">{{ driver.stops|length - 2 }} locations</div>
+        </div>
+        {% if driver.alerts %}
+        <div class="stat">
+            <div class="stat-label">Alerts</div>
+            <div class="stat-value" style="color: var(--danger);">{{ driver.alerts|length }} issues</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="route-stops">
+        {% for stop in driver.stops %}
+            {% if stop == "DEPOT" and loop.first %}
+                <div class="route-stop">
+                    <div class="stop-icon depot">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <div class="stop-details">
+                        <div class="stop-location">Starting Depot</div>
+                        <div class="stop-info">Route start point</div>
+                    </div>
+                    <div class="stop-time">
+                        <div>{{ 0|format_time }}</div>
+                        <div style="font-size: 0.8rem; color: #7f8c8d;">Departure</div>
+                    </div>
+                </div>
+            {% elif stop == "DEPOT" and loop.last %}
+                <div class="route-stop">
+                    <div class="stop-icon depot">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <div class="stop-details">
+                        <div class="stop-location">Return to Depot</div>
+                        <div class="stop-info">Route end point</div>
+                    </div>
+                </div>
+            {% else %}
+                {% set delivery_stop = None %}
+                {% for ds in driver.delivery_stops %}
+                    {% if ds.location_id == stop %}
+                        {% set delivery_stop = ds %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% if delivery_stop %}
+                    <div class="route-stop">
+                        <div class="stop-icon {% if delivery_stop.is_late %}late{% elif delivery_stop.is_rescheduled %}rescheduled{% endif %}">
+                            <i class="fas {% if delivery_stop.is_late %}fa-clock{% elif delivery_stop.is_rescheduled %}fa-calendar-day{% else %}fa-box{% endif %}"></i>
+                        </div>
+                        <div class="stop-details">
+                            <div class="stop-location">{{ delivery_stop.location_id }}</div>
+                            <div class="stop-info">
+                                Order ID: {{ delivery_stop.order_id }}
+                                {% if delivery_stop.is_rescheduled %}
+                                    <span class="badge badge-primary">Rescheduled</span>
+                                {% endif %}
+                                {% if delivery_stop.is_late %}
+                                    <span class="badge badge-danger">Late Arrival</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="stop-time">
+                            <div>{{ delivery_stop.arrival_time_fmt }}</div>
+                            <div style="font-size: 0.8rem; color: {% if delivery_stop.is_late %}var(--danger){% else %}#7f8c8d{% endif %};">
+                                {% if delivery_stop.is_late %}Late by {{ delivery_stop.arrival_time - delivery_stop.due_time }} min{% else %}On time{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+<div class="card">
+    <h2>Operational Summary for Tomorrow</h2>
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+        <div class="stat-card primary">
+            <div class="icon">
+                <i class="fas fa-road"></i>
+            </div>
+            <div class="value">{{ stats.distance }} km</div>
+            <div class="label">Total Distance</div>
+        </div>
+        
+        <div class="stat-card success">
+            <div class="icon">
+                <i class="fas fa-leaf"></i>
+            </div>
+            <div class="value">{{ "%.1f"|format(stats.emissions) }} kg</div>
+            <div class="label">CO2 Emissions</div>
+        </div>
+        
+        <div class="stat-card warning">
+            <div class="icon">
+                <i class="fas fa-box"></i>
+            </div>
+            <div class="value">{{ stats.orders }}</div>
+            <div class="label">Orders to Deliver</div>
+        </div>
+        
+        <div class="stat-card danger">
+            <div class="icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="value">{{ stats.late_deliveries }}</div>
+            <div class="label">Potential Late Deliveries</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
